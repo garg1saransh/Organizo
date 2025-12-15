@@ -3,28 +3,32 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "dev": "nodemon src/index.ts",
-  "test": "jest",
-  "prisma:generate": "prisma generate",
-  "prisma:migrate": "prisma migrate dev",
-  "build": "tsc"
-},
+    "dev": "nodemon src/index.ts",
+    "test": "jest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "build": "tsc"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^7.1.0",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "pg": "^8.16.3",
     "prisma": "^7.1.0",
     "socket.io": "^4.8.1",
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",

@@ -1,9 +1,8 @@
-# collaborative-task-manager
-Task management app
+# Organizo
+Task Management App
 
 
-
-A simple task management backend with authentication, REST APIs, and real-time updates using Socket.IO.
+Organizo is simple task management app that has backend with authentication, REST APIs, and real-time updates using Socket.IO.
 
 ## Tech Stack
 

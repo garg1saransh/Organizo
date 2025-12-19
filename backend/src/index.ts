@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3001;
 // CORS config for local + Vercel
 const allowedOrigins = new Set<string>([
   'http://localhost:5173',
-  'https://organizo-9zelex2aa-saransh-gargs-projects.vercel.app',
+  'https://organizo-k3s1g8nvo-saransh-gargs-projects.vercel.app',
 ]);
 
 app.use(

@@ -3,20 +3,25 @@ import cors from 'cors';
 import http from 'http';
 import authRoutes from './routes/auth.routes';
 import taskRoutes from './routes/task.routes';
-import userRoutes from './routes/user.routes'; // NEW
+import userRoutes from './routes/user.routes';
 import { initSocket } from './realtime/socket';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-// Global middlewares
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://organizo-mdnv2b715-saransh-gargs-projects.vercel.app',
+];
+
 app.use(
   cors({
-    origin: 'http://localhost:5173', // React dev server
+    origin: allowedOrigins,
     credentials: true,
   })
 );
+
 app.use(express.json());
 
 // Health check
@@ -27,16 +32,16 @@ app.get('/api/v1/health', (req, res) => {
 // Auth routes
 app.use('/api/auth', authRoutes);
 
-// User routes (for listing users for assignment)
+// User routes
 app.use('/api/users', userRoutes);
 
 // Task routes
 app.use('/api/tasks', taskRoutes);
 
-// Global error handler MUST be after all routes
+// Global error handler
 app.use(errorHandler);
 
-// Create HTTP server and attach Socket.io
+// HTTP server + Socket.io
 const server = http.createServer(app);
 initSocket(server);
 

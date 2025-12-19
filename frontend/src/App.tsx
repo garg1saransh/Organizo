@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ProfilePanel } from './features/auth/ProfilePanel';
+import { api } from './lib/api';
 
 type AuthState = ReturnType<typeof loadAuth>;
 
@@ -137,27 +138,14 @@ function App() {
     try {
       setCreating(true);
 
-      const response = await fetch('http://localhost:3001/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: values.title.trim(),
-          description: values.description?.trim() || null,
-          priority: values.priority,
-          status: values.status,
-          dueDate: values.dueDate || null,
-          assignedToId: values.assignedToId || null,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create task (${response.status})`);
-      }
-
-      await response.json();
+      await api.post('/api/tasks', {
+  title: values.title.trim(),
+  description: values.description?.trim() || null,
+  priority: values.priority,
+  status: values.status,
+  dueDate: values.dueDate || null,
+  assignedToId: values.assignedToId || null,
+});
 
       reset({
         title: '',
@@ -178,30 +166,14 @@ function App() {
     if (!token) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3001/api/tasks/${id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title: values.title.trim(),
-            description: values.description?.trim() || null,
-            priority: values.priority,
-            status: values.status,
-            dueDate: values.dueDate || null,
-            assignedToId: values.assignedToId || null,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to update task (${response.status})`);
-      }
-
-      const updated = await response.json();
+      const updated = await api.put<any>(`/api/tasks/${id}`, {
+  title: values.title.trim(),
+  description: values.description?.trim() || null,
+  priority: values.priority,
+  status: values.status,
+  dueDate: values.dueDate || null,
+  assignedToId: values.assignedToId || null,
+});
       const normalized = normalizeTask(updated);
 
       setTasks((prev) =>
@@ -220,23 +192,9 @@ function App() {
       task.status === 'Completed' ? 'ToDo' : 'Completed';
 
     try {
-      const response = await fetch(
-        `http://localhost:3001/api/tasks/${task.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ status: updatedStatus }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to update task (${response.status})`);
-      }
-
-      const updated = await response.json();
+      const updated = await api.put<any>(`/api/tasks/${task.id}`, {
+  status: updatedStatus,
+});
       const normalized = normalizeTask(updated);
 
       setTasks((prev) =>
@@ -251,21 +209,9 @@ function App() {
     if (!token) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3001/api/tasks/${taskId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await api.delete(`/api/tasks/${taskId}`);
 
-      if (!response.ok) {
-        throw new Error(`Failed to delete task (${response.status})`);
-      }
-
-      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (err: any) {
       setError(err.message ?? 'Failed to delete task');
     }
@@ -280,18 +226,8 @@ function App() {
     queryKey: ['tasks', token],
     enabled: !!token,
     queryFn: async () => {
-      const response = await fetch('http://localhost:3001/api/tasks', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load tasks (${response.status})`);
-      }
-
-      const data = await response.json();
-      return normalizeList(data);
+      const data = await api.get<any>('/api/tasks');
+return normalizeList(data);
     },
   });
 
@@ -299,13 +235,8 @@ function App() {
     queryKey: ['users', token],
     enabled: !!token,
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        throw new Error('Failed to load users');
-      }
-      return res.json();
+      const res = await api.get<{ users: AppUser[] }>('/api/users');
+return res;
     },
   });
   const users = usersData?.users ?? [];

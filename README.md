@@ -1,158 +1,257 @@
-# Organizo
-Task Management App
+# Organizo – Collaborative Task Manager
 
+Organizo is a full‑stack collaborative task management app with authentication, real‑time updates, and a responsive dashboard for managing personal and team tasks.
 
-Organizo is simple task management app that has backend with authentication, REST APIs, and real-time updates using Socket.IO.
+---
 
-## Tech Stack
+## Live Demo & Access
 
-- Node.js + TypeScript
-- Express
-- PostgreSQL (or any SQL database supported by your ORM)
-- Prisma (or similar ORM) for data access
-- JWT-based authentication
-- Socket.IO for real-time updates
+- **Frontend (Vercel)**: https://organizo-eight.vercel.app
+- **Backend API**: https://collaborative-task-manager-79jq.onrender.com
+- **Demo Account**  
+  - Email: demo@example.com  
+  - Password: demo@123
 
-## Getting Started
+---
+
+## Tech Stack & Design Decisions
+
+### Frontend
+
+- **React + TypeScript** (Vite)
+- **Tailwind CSS** for styling and fully responsive layout (mobile → desktop)
+- **React Query (@tanstack/react-query)** for server‑state management and caching
+- **React Hook Form + Zod** for forms and validation
+
+### Backend
+
+- **Node.js + TypeScript**
+- **Express** with a **service/repository** style architecture
+- **PostgreSQL** as the primary database  
+  - Chosen for strong relational guarantees, easy joins for users/tasks, and good support in hosting providers.
+- **Prisma** as ORM for type‑safe DB access
+- **JWT authentication** (Bearer token) with bcrypt‑hashed passwords
+- **Socket.IO** for real‑time collaboration (task updates and assignment notifications)
+
+### Deployment
+
+- **Frontend**: Vercel
+- **Backend + DB**: Render (Node service + managed PostgreSQL)
+
+---
+
+## Architecture Overview
+
+### High‑Level Structure
+
+- `backend/`
+  - `src/controllers/` – HTTP route handlers (thin, no business logic)
+  - `src/services/` – business logic (e.g., task creation, updates, assignment)
+  - `src/repositories/` – data access via Prisma (UserRepo, TaskRepo)
+  - `src/dto/` – Zod schemas for request validation (CreateTaskDto, UpdateTaskDto, AuthDto)
+  - `src/socket/` – Socket.IO server setup and event wiring
+  - `src/middleware/` – auth middleware, error handler
+
+- `frontend/`
+  - `src/features/auth/` – login/register/profile panels, auth store
+  - `src/realtime/socket.ts` – Socket.IO client
+  - `src/lib/api.ts` – fetch wrapper that injects JWT into `Authorization` header
+  - `src/App.tsx` – main dashboard, task CRUD, filters, and responsive layout
+
+### Authentication & Sessions
+
+- Users register with **name, email, password**.
+- Passwords are **hashed** using bcrypt before storing.
+- On login:
+  - Backend validates credentials and returns a **JWT** and basic user object.
+  - Frontend stores `{ token, user }` in `localStorage` under `auth`.
+  - All API requests use `Authorization: Bearer <token>` header.
+- Protected routes validate the JWT in a middleware and attach `req.user` to the request.
+
+---
+
+## Backend Setup
 
 ### Prerequisites
 
 - Node.js (LTS)
 - npm or yarn
-- PostgreSQL running locally (or a connection URL for a remote DB)
+- PostgreSQL instance (local or remote)
 
 ### Installation
 
 git clone <your-repo-url>
-cd <your-repo-folder>
+cd <your-repo-folder>/backend
 npm install
 
+text
 
-### Environment variables
+### Environment Variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in `backend`:
 
 DATABASE_URL=postgresql://user:password@localhost:5432/yourdb
 JWT_SECRET=your_jwt_secret
 PORT=3001
 
+text
 
-### Database setup
-
-Run the migrations to create tables:
+### Database Setup
 
 npx prisma migrate dev
 
+text
 
-
-### Run the server
+### Run the Server (Dev)
 
 npm run dev
 
-The server will start on `http://localhost:3001` by default.
+text
+
+The server runs on `http://localhost:3001`.
 
 ---
 
-## REST API Overview
+## Frontend Setup
+
+### Installation
+
+cd <your-repo-folder>/frontend
+npm install
+
+text
+
+### Environment Variables
+
+Create a `.env.local` in `frontend`:
+
+VITE_API_URL=http://localhost:3001
+
+text
+
+For production, set `VITE_API_URL` in Vercel to your deployed backend URL (e.g. `https://collaborative-task-manager-79i9.onrender.com`).
+
+### Run the Frontend (Dev)
+
+npm run dev
+
+text
+
+The app runs on `http://localhost:5173` by default.
+
+---
+
+## API Contract
 
 ### Authentication
 
 #### `POST /api/auth/register`
 
 - Registers a new user.
-- Body: `{ "name": string, "email": string, "password": string }`
-- Returns: user data (without password).
+- **Body**:
+
+{
+"name": "string",
+"email": "string",
+"password": "string"
+}
+
+text
+
+- **Response**: user data (without password).
 
 #### `POST /api/auth/login`
 
 - Logs in an existing user.
-- Body: `{ "email": string, "password": string }`
-- Returns: `{ "token": string, "user": { ... } }` (JWT token used in `Authorization: Bearer <token>` for protected routes).
+- **Body**:
 
-### Tasks
+{
+"email": "string",
+"password": "string"
+}
 
-All task endpoints require a valid JWT in the `Authorization` header.
+text
+
+- **Response**:
+
+{
+"token": "jwt-token",
+"user": {
+"id": "string",
+"name": "string | null",
+"email": "string"
+}
+}
+
+text
+
+Use the token as `Authorization: Bearer <token>` for all protected routes.
+
+---
+
+### Tasks (Protected)
+
+All task endpoints require a valid JWT.
 
 #### `GET /api/tasks`
 
-- Returns a list of tasks visible to the current user.
+- Returns a list of tasks visible to the current user (used for dashboard views, filters, and search).
 
 #### `POST /api/tasks`
 
 - Creates a new task.
-- Example body:
+- **Body** (validated with Zod DTO):
 
 {
 "title": "Design login page",
 "description": "Create responsive UI for login",
 "dueDate": "2025-12-31T00:00:00.000Z",
-"priority": "HIGH",
-"status": "ToDo",
+"priority": "LOW | MEDIUM | HIGH | URGENT",
+"status": "ToDo | InProgress | Review | Completed",
 "assignedToId": "user-id-or-null"
 }
 
+text
 
+- **Response**: created task object.
 
 #### `PUT /api/tasks/:id`
 
-- Updates a task (status, priority, assignee, etc.).
+- Updates an existing task (title, description, status, priority, dueDate, assignedToId).
+- **Body**: same shape as create task (partial or full, depending on implementation).
 
 #### `DELETE /api/tasks/:id`
 
-- Deletes a task.
+- Deletes a task created by the user (or according to your authorization rules).
 
 ---
 
-## Real-time Events (Socket.IO)
+## Real‑Time Collaboration (Socket.IO)
 
-The backend exposes a Socket.IO server on the same host/port as the REST API (for example, `http://localhost:3001`).
+The backend exposes a Socket.IO server on the same host/port as the REST API (e.g. `http://localhost:3001`).
 
+### Client Connection
 
+The frontend connects with the JWT token:
 
-### Socket.IO connection
+import { io } from 'socket.io-client';
 
-In the frontend, the client will connect using the JWT received from the login endpoint and then subscribe to the events below. 
-
-Example :
-
-import { io } from "socket.io-client";
-
-const socket = io("http://localhost:3001", {
+const socket = io(import.meta.env.VITE_API_URL, {
 auth: {
-token: "<JWT_TOKEN_FROM_LOGIN>"
-}
+token: '<JWT_TOKEN_FROM_LOGIN>',
+},
 });
 
-// Real-time task updates
-socket.on("task:created", (task) => {
-// Add the new task to the current list
-});
+text
 
-socket.on("task:updated", (task) => {
-// Update the task in the current list
-});
+### Events Emitted by the Server
 
-socket.on("task:deleted", ({ id }) => {
-// Remove the task with this id from the current list
-});
+All payloads are JSON‑serializable task objects.
 
-// Assignment notifications
-socket.on("task:assigned", (task) => {
-// Show an in-app notification for the assigned task
-});
-
----
-
-## Events emitted by the server
-
-These events are emitted over Socket.IO whenever a task changes. Any objects that can be encoded as JSON are supported by Socket.IO. 
-
-### `task:created`
+#### `task:created`
 
 Emitted after a new task is created.
 
-Payload:
-
 {
 "id": "string",
 "title": "string",
@@ -166,67 +265,99 @@ Payload:
 "updatedAt": "string"
 }
 
+text
 
-### `task:updated`
+#### `task:updated`
 
-Emitted after an existing task is updated (for example, status, priority, assignee, title, or description).
+Emitted after an existing task is updated (status, priority, assignee, etc.).  
+Payload shape is the same as `task:created`.
 
-Payload: same shape as `task:created`.
-
-{
-"id": "string",
-"title": "string",
-"description": "string or null",
-"dueDate": "string or null",
-"priority": "LOW | MEDIUM | HIGH | URGENT",
-"status": "ToDo | InProgress | Review | Completed",
-"creatorId": "string",
-"assignedToId": "string or null",
-"createdAt": "string",
-"updatedAt": "string"
-}
-
-
-
-### `task:deleted`
+#### `task:deleted`
 
 Emitted after a task is deleted.
 
-Payload:
-
 { "id": "string" }
 
+text
 
-### `task:assigned`
+#### `task:assigned`
 
-Emitted to the assigned user’s personal room when a task is assigned or reassigned. Rooms and namespaces are a core concept in Socket.IO for targeting specific clients.
+Emitted to the assigned user’s personal room when a task is assigned or reassigned.
 
-- Room: `user:<assignedToId>`
+- Room name: `user:<assignedToId>`
+- Payload: same shape as `task:created`.
 
-Payload: same shape as `task:created`.
-
-{
-"id": "string",
-"title": "string",
-"description": "string or null",
-"dueDate": "string or null",
-"priority": "LOW | MEDIUM | HIGH | URGENT",
-"status": "ToDo | InProgress | Review | Completed",
-"creatorId": "string",
-"assignedToId": "string or null",
-"createdAt": "string",
-"updatedAt": "string"
-}
-
-
+The frontend listens to this event and shows an in‑app notification in the top‑right corner.
 
 ---
 
-## Frontend responsibilities
+## Frontend Behaviour
 
-When the React frontend is implemented, it should:
+The React frontend:
 
-- Authenticate the user and store the JWT from `/api/auth/login`.  
-- Establish a Socket.IO connection with `{ auth: { token: "<JWT>" } }`.  
-- Listen to `task:created`, `task:updated`, and `task:deleted` to keep task lists in sync in real time.  
-- Listen to `task:assigned` and display a clear in-app notification for the currently logged-in user.
+- Stores the JWT and user info from `/api/auth/login` in `localStorage`.
+- Uses a shared `api` client that automatically attaches `Authorization: Bearer <token>` to every request.
+- Uses **React Query** to:
+  - Fetch and cache `/api/tasks` and `/api/users`.
+  - Show loading skeletons / spinners while data is loading.
+  - Show retry options on errors.
+- Uses **Socket.IO** to:
+  - Listen to `task:created`, `task:updated`, and `task:deleted` and keep the task list in sync.
+  - Listen to `task:assigned` and show persistent notifications.
+- Provides a responsive dashboard with:
+  - Views: All, Assigned to me, Created by me, Overdue.
+  - Filters: status and priority.
+  - Sorting: due date (none / ascending / descending).
+  - Search: by title or description.
+  - Overview panel: total tasks, completed, overdue.
+
+---
+
+## Validation, Error Handling & DTOs
+
+- All critical endpoints use **Zod DTOs** for input validation (e.g., `CreateTaskDto`, `UpdateTaskDto`, `AuthDto`).
+- Errors return appropriate HTTP status codes:
+  - `400` – validation error.
+  - `401` – missing/invalid token.
+  - `404` – resource not found.
+  - `500` – unexpected server error (logged on the server).
+
+---
+
+## Testing
+
+- Backend tests (Jest) cover key business logic, such as:
+  - Task creation service (valid/invalid payloads).
+  - Assignment logic and emitted events.
+  - Auth service (password hashing & JWT issuing).
+
+> Add exact test file paths here once implemented, e.g. `src/services/taskService.test.ts`.
+
+---
+
+## Trade‑Offs & Assumptions
+
+- No password reset or email verification flows (out of scope for assessment).
+- Basic access rules: users can see tasks relevant to them; fine‑grained RBAC is not implemented.
+- Optimistic UI and audit logging are not implemented / partially implemented depending on time.
+
+---
+
+## How to Run Everything Locally (Summary)
+
+1. **Backend**
+   - `cd backend`
+   - Configure `.env`
+   - `npm install`
+   - `npx prisma migrate dev`
+   - `npm run dev`
+
+2. **Frontend**
+   - `cd frontend`
+   - Configure `.env.local` with `VITE_API_URL=http://localhost:3001`
+   - `npm install`
+   - `npm run dev`
+
+Open `http://localhost:5173` and log in with the demo user (or register a new one).
+
+---

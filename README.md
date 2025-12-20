@@ -331,8 +331,6 @@ The React frontend:
   - Assignment logic and emitted events.
   - Auth service (password hashing & JWT issuing).
 
-> Add exact test file paths here once implemented, e.g. `src/services/taskService.test.ts`.
-
 ---
 
 ## Trade‑Offs & Assumptions
